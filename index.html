@@ -20,7 +20,7 @@ nav button.on{color:var(--pri);box-shadow:inset 0 3px var(--pri)}
 label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
 input,select,textarea{font-family:inherit;width:100%;padding:11px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--tx);font-size:16px}
 .row{display:flex;gap:8px;align-items:center;margin-bottom:6px}.row>*{flex:1}.row button.x{flex:0 0 40px}
-a{color:var(--pri)}h3{margin:0 0 4px;font-size:15px}
+a{color:var(--pri)}.lnk{color:var(--pri);cursor:pointer;text-decoration:underline}.back{border:0;background:none;color:var(--pri);font-weight:700;font-size:16px;padding:4px 0 10px}hr{border:0;border-top:1px solid var(--ln);margin:10px 0}h3{margin:0 0 4px;font-size:15px}
 .btn{width:100%;padding:13px;border:0;border-radius:10px;background:var(--pri);color:var(--pt);font-weight:700;font-size:16px;margin-top:12px}
 .sm{padding:8px 12px;border:1px dashed var(--pri);background:none;color:var(--pri);border-radius:8px;font-weight:600;width:auto}
 .x{border:0;background:none;color:var(--red);font-size:20px}
@@ -49,12 +49,12 @@ const $=id=>document.getElementById(id);
 const n=v=>parseFloat(v)||0;
 const f=v=>'₹'+Math.round(v).toLocaleString('en-IN');
 const today=()=>new Date().toISOString().slice(0,10);
-const exp=t=>n(t.fuel)+t.tolls.reduce((s,x)=>s+n(x),0)+t.others.reduce((s,x)=>s+n(x.a),0);
+const exp=t=>n(t.fuel)+n(t.dfee)+t.tolls.reduce((s,x)=>s+n(x),0)+t.others.reduce((s,x)=>s+n(x.a),0);
 const net=t=>n(t.amount)-exp(t);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function render(){
-  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
-  $('app').innerHTML=tab==='add'?addView():tab==='list'?listView():repView();
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===(tab==='cust'?'list':tab)));
+  $('app').innerHTML=tab==='add'?addView():tab==='list'?listView():tab==='cust'?custView():repView();
   if(tab==='add')calc();
 }
 function addView(){
@@ -70,33 +70,58 @@ function addView(){
   <label>Driver name</label><input id="dname" placeholder="Driver name">
   <label>Driver phone number</label><input id="dph" type="tel" inputmode="tel" placeholder="e.g. 98765 43210">
   <label>About the driver (comment)</label><textarea id="dnote" rows="2" placeholder="Notes about the driver"></textarea>
+  <label>Driver charges / fee</label><input id="dfee" type="number" inputmode="decimal" placeholder="0" oninput="calc()">
   <label>Trip Amount (income)</label><input id="amt" type="number" inputmode="decimal" placeholder="0" oninput="calc()"></div>
   <div class="card"><h3>Fuel</h3><input id="fuel" type="number" inputmode="decimal" placeholder="Fuel cost" oninput="calc()"></div>
   <div class="card"><h3>Tolls</h3>${tolls.map((t,i)=>`<div class="row"><input type="number" inputmode="decimal" class="tl" placeholder="Toll ${i+1}" value="${t}" oninput="tolls[${i}]=this.value;calc()"><button class="x" onclick="tolls.splice(${i},1);if(!tolls.length)tolls=[''];render2()">✕</button></div>`).join('')}
   <button class="btn sm" onclick="tolls.push('');render2()">+ Add toll</button></div>
   <div class="card"><h3>Other expenses</h3>${others.map((o,i)=>`<div class="row"><input placeholder="Description" value="${esc(o.n)}" oninput="others[${i}].n=this.value"><input type="number" inputmode="decimal" placeholder="Amount" value="${o.a}" oninput="others[${i}].a=this.value;calc()"><button class="x" onclick="others.splice(${i},1);if(!others.length)others=[{n:'',a:''}];render2()">✕</button></div>`).join('')}
   <button class="btn sm" onclick="others.push({n:'',a:''});render2()">+ Add expense</button></div>
-  <div class="card calc"><h3>Automatic calculation</h3><div><span>Income</span><span id="c1"></span></div><div><span>Fuel</span><span id="c2"></span></div><div><span>Tolls</span><span id="c3"></span></div><div><span>Other</span><span id="c4"></span></div><div><span>Total expenses</span><span id="c5"></span></div><div class="net"><span>Net profit</span><span id="c6"></span></div></div>
+  <div class="card calc"><h3>Automatic calculation</h3><div><span>Income</span><span id="c1"></span></div><div><span>Fuel</span><span id="c2"></span></div><div><span>Driver fee</span><span id="c7"></span></div><div><span>Tolls</span><span id="c3"></span></div><div><span>Other</span><span id="c4"></span></div><div><span>Total expenses</span><span id="c5"></span></div><div class="net"><span>Net profit</span><span id="c6"></span></div></div>
   <button class="btn" onclick="saveTrip()">Save Trip</button>`;
 }
-function render2(){const k=['cust','cph','cnote','date','trip','veh','dname','dph','dnote','amt','fuel'].map(i=>$(i).value);render();['cust','cph','cnote','date','trip','veh','dname','dph','dnote','amt','fuel'].forEach((i,j)=>$(i).value=k[j]);calc()}
+function render2(){const k=['cust','cph','cnote','date','trip','veh','dname','dph','dnote','dfee','amt','fuel'].map(i=>$(i).value);render();['cust','cph','cnote','date','trip','veh','dname','dph','dnote','dfee','amt','fuel'].forEach((i,j)=>$(i).value=k[j]);calc()}
 function calc(){
-  const a=n($('amt').value),fu=n($('fuel').value),tl=tolls.reduce((s,x)=>s+n(x),0),ot=others.reduce((s,x)=>s+n(x.a),0),tot=fu+tl+ot,p=a-tot;
-  $('c1').textContent=f(a);$('c2').textContent=f(fu);$('c3').textContent=f(tl);$('c4').textContent=f(ot);$('c5').textContent=f(tot);
+  const a=n($('amt').value),fu=n($('fuel').value),df=n($('dfee').value),tl=tolls.reduce((s,x)=>s+n(x),0),ot=others.reduce((s,x)=>s+n(x.a),0),tot=fu+df+tl+ot,p=a-tot;
+  $('c1').textContent=f(a);$('c2').textContent=f(fu);$('c7').textContent=f(df);$('c3').textContent=f(tl);$('c4').textContent=f(ot);$('c5').textContent=f(tot);
   $('c6').textContent=f(p);$('c6').className=p>=0?'pos':'neg';
 }
 function saveTrip(){
   const c=$('cust').value.trim(),v=$('veh').value.trim();
   if(!c||!v||!n($('amt').value)){alert('Please enter Customer, Vehicle and Amount.');return}
-  trips.unshift({id:Date.now(),customer:c,date:$('date').value||today(),trip:$('trip').value.trim(),vehicle:v,model,cphone:$('cph').value.trim(),cnote:$('cnote').value.trim(),driver:$('dname').value.trim(),dphone:$('dph').value.trim(),dnote:$('dnote').value.trim(),amount:n($('amt').value),fuel:n($('fuel').value),tolls:tolls.filter(x=>n(x)),others:others.filter(o=>n(o.a)).map(o=>({n:o.n,a:n(o.a)}))});
+  trips.unshift({id:Date.now(),customer:c,date:$('date').value||today(),trip:$('trip').value.trim(),vehicle:v,model,cphone:$('cph').value.trim(),cnote:$('cnote').value.trim(),driver:$('dname').value.trim(),dphone:$('dph').value.trim(),dnote:$('dnote').value.trim(),amount:n($('amt').value),fuel:n($('fuel').value),dfee:n($('dfee').value),tolls:tolls.filter(x=>n(x)),others:others.filter(o=>n(o.a)).map(o=>({n:o.n,a:n(o.a)}))});
   save();tolls=[''];others=[{n:'',a:''}];tab='list';render();
 }
 function listView(){
   if(!trips.length)return '<div class="empty">No trips yet. Add your first trip.</div>';
-  return trips.map(t=>{const p=net(t);return `<div class="card"><div class="tr"><div class="ico">${CAR[t.model]||''}</div><div style="flex:1"><b>${esc(t.customer)}</b></div><b class="${p>=0?'pos':'neg'}">${f(p)}</b></div>
+  return trips.map(t=>{const p=net(t);return `<div class="card"><div class="tr"><div class="ico">${CAR[t.model]||''}</div><div style="flex:1"><b class="lnk" data-c="${esc(t.customer)}" onclick="openCust(this.dataset.c)">${esc(t.customer)} ›</b></div><b class="${p>=0?'pos':'neg'}">${f(p)}</b></div>
   <div class="tr"><small>${t.date} · ${esc(t.model||'')} ${esc(t.vehicle)}</small><small>Income ${f(t.amount)}</small></div>
-  ${t.trip?`<small>${esc(t.trip)}</small><br>`:''}${t.cphone?`<small>📞 <a href="tel:${esc(t.cphone)}">${esc(t.cphone)}</a></small><br>`:''}${t.cnote?`<small>💬 ${esc(t.cnote)}</small><br>`:''}${t.driver||t.dphone?`<small>🧑‍✈️ Driver: ${esc(t.driver||'')} ${t.dphone?`<a href="tel:${esc(t.dphone)}">${esc(t.dphone)}</a>`:''}</small><br>`:''}${t.dnote?`<small>📝 ${esc(t.dnote)}</small><br>`:''}<small>Fuel ${f(t.fuel)} · Tolls ${f(t.tolls.reduce((s,x)=>s+n(x),0))} (${t.tolls.length}) · Other ${f(t.others.reduce((s,x)=>s+n(x.a),0))}</small><br>
+  ${t.trip?`<small>${esc(t.trip)}</small><br>`:''}${t.cphone?`<small>📞 <a href="tel:${esc(t.cphone)}">${esc(t.cphone)}</a></small><br>`:''}${t.cnote?`<small>💬 ${esc(t.cnote)}</small><br>`:''}${t.driver||t.dphone?`<small>🧑‍✈️ Driver: ${esc(t.driver||'')} ${t.dphone?`<a href="tel:${esc(t.dphone)}">${esc(t.dphone)}</a>`:''}</small><br>`:''}${t.dnote?`<small>📝 ${esc(t.dnote)}</small><br>`:''}<small>Fuel ${f(t.fuel)} · Driver ${f(t.dfee||0)} · Tolls ${f(t.tolls.reduce((s,x)=>s+n(x),0))} (${t.tolls.length}) · Other ${f(t.others.reduce((s,x)=>s+n(x.a),0))}</small><br>
   <button class="del" onclick="delTrip(${t.id})">Delete</button></div>`}).join('');
+}
+let curCust='';
+function openCust(c){curCust=c;tab='cust';render();window.scrollTo(0,0)}
+function custView(){
+  const ts=trips.filter(t=>t.customer.toLowerCase()===curCust.toLowerCase());
+  if(!ts.length)return '<button class="back" onclick="tab=\'list\';render()">‹ Back</button><div class="empty">No trips found.</div>';
+  const ph=[...new Set(ts.map(t=>t.cphone).filter(Boolean))],notes=ts.filter(t=>t.cnote);
+  const I=ts.reduce((a,t)=>a+n(t.amount),0),E=ts.reduce((a,t)=>a+exp(t),0);
+  const sum=a=>a.reduce((x,y)=>x+n(y),0);
+  return `<button class="back" onclick="tab='list';render()">‹ Back to trips</button>
+  <div class="card"><h3 style="font-size:20px">${esc(ts[0].customer)}</h3>
+  <div>📞 ${ph.length?ph.map(p=>`<a href="tel:${esc(p)}">${esc(p)}</a>`).join(', '):'<small>No phone saved</small>'}</div>
+  ${notes.length?'<hr><small>Customer notes</small>'+notes.map(t=>`<div>💬 ${esc(t.cnote)} <small>(${t.date})</small></div>`).join(''):''}</div>
+  <div class="grid"><div class="stat"><small>Total trips</small><b>${ts.length}</b></div><div class="stat"><small>Total billed</small><b>${f(I)}</b></div><div class="stat"><small>Total expenses</small><b>${f(E)}</b></div><div class="stat"><small>Net profit</small><b class="${I-E>=0?'pos':'neg'}">${f(I-E)}</b></div></div>
+  <h3 style="margin:14px 0 8px">All trips</h3>
+  ${ts.map(t=>{const p=net(t);return `<div class="card"><div class="tr"><div class="ico">${CAR[t.model]||''}</div><div style="flex:1"><b>${t.date}</b><br><small>${esc(t.trip||'-')}</small></div><b class="${p>=0?'pos':'neg'}">${f(p)}</b></div><hr>
+  <div class="calc"><div><span>Vehicle</span><span>${esc(t.model||'')} ${esc(t.vehicle)}</span></div>
+  <div><span>Driver</span><span>${esc(t.driver||'-')}${t.dphone?` · <a href="tel:${esc(t.dphone)}">${esc(t.dphone)}</a>`:''}</span></div>
+  ${t.dnote?`<div><span>Driver note</span><span>${esc(t.dnote)}</span></div>`:''}
+  <div><span>Trip amount</span><span>${f(t.amount)}</span></div><div><span>Fuel</span><span>${f(t.fuel)}</span></div><div><span>Driver fee</span><span>${f(t.dfee||0)}</span></div>
+  <div><span>Tolls (${t.tolls.length})</span><span>${f(sum(t.tolls))}</span></div>
+  ${t.tolls.map((x,i)=>`<div><small>&nbsp;&nbsp;Toll ${i+1}</small><small>${f(x)}</small></div>`).join('')}
+  ${t.others.map(o=>`<div><span>${esc(o.n||'Other')}</span><span>${f(o.a)}</span></div>`).join('')}
+  <div class="net"><span>Net profit</span><span class="${p>=0?'pos':'neg'}">${f(p)}</span></div></div></div>`}).join('')}`;
 }
 function delTrip(id){if(confirm('Delete this trip?')){trips=trips.filter(t=>t.id!==id);save();render()}}
 function key(d){
@@ -116,7 +141,7 @@ function dl(type){
   if(!trips.length){alert('No trips to export yet.');return}
   let data,name,mime;
   if(type==='json'){data=JSON.stringify(trips,null,1);name='trips-backup-'+today()+'.json';mime='application/json'}
-  else{const q=v=>'"'+String(v).replace(/"/g,'""')+'"';data='Date,Customer,Trip,Model,Vehicle,CustomerPhone,CustomerNote,Driver,DriverPhone,DriverNote,Amount,Fuel,Tolls,Other,Net\n'+trips.map(t=>[t.date,q(t.customer),q(t.trip),q(t.model||''),q(t.vehicle),q(t.cphone||''),q(t.cnote||''),q(t.driver||''),q(t.dphone||''),q(t.dnote||''),t.amount,t.fuel,t.tolls.reduce((a,x)=>a+n(x),0),t.others.reduce((a,x)=>a+n(x.a),0),net(t)].join(',')).join('\n');name='trips-'+today()+'.csv';mime='text/csv'}
+  else{const q=v=>'"'+String(v).replace(/"/g,'""')+'"';data='Date,Customer,Trip,Model,Vehicle,CustomerPhone,CustomerNote,Driver,DriverPhone,DriverNote,Amount,Fuel,DriverFee,Tolls,Other,Net\n'+trips.map(t=>[t.date,q(t.customer),q(t.trip),q(t.model||''),q(t.vehicle),q(t.cphone||''),q(t.cnote||''),q(t.driver||''),q(t.dphone||''),q(t.dnote||''),t.amount,t.fuel,t.dfee||0,t.tolls.reduce((a,x)=>a+n(x),0),t.others.reduce((a,x)=>a+n(x.a),0),net(t)].join(',')).join('\n');name='trips-'+today()+'.csv';mime='text/csv'}
   try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:mime}));a.download=name;document.body.appendChild(a);a.click();a.remove()}catch(e){alert('Download not supported here. Open the hosted copy of the app to download.')}
 }
 function imp(file){
@@ -129,16 +154,16 @@ function repView0(){
   const seg=`<div class="seg"><button class="${per==='week'?'on':''}" onclick="per='week';render()">Weekly</button><button class="${per==='month'?'on':''}" onclick="per='month';render()">Monthly</button></div>`;
   if(!trips.length)return seg+'<div class="empty">Add trips to see reports.</div>';
   const g={};
-  trips.forEach(t=>{const k=key(t.date);g[k]=g[k]||{c:0,i:0,f:0,t:0,o:0};const r=g[k];r.c++;r.i+=n(t.amount);r.f+=n(t.fuel);r.t+=t.tolls.reduce((s,x)=>s+n(x),0);r.o+=t.others.reduce((s,x)=>s+n(x.a),0)});
-  const ks=Object.keys(g).sort().reverse(),T={c:0,i:0,f:0,t:0,o:0};
+  trips.forEach(t=>{const k=key(t.date);g[k]=g[k]||{c:0,i:0,f:0,d:0,t:0,o:0};const r=g[k];r.c++;r.i+=n(t.amount);r.f+=n(t.fuel);r.d+=n(t.dfee);r.t+=t.tolls.reduce((s,x)=>s+n(x),0);r.o+=t.others.reduce((s,x)=>s+n(x.a),0)});
+  const ks=Object.keys(g).sort().reverse(),T={c:0,i:0,f:0,d:0,t:0,o:0};
   ks.forEach(k=>{for(const x in T)T[x]+=g[k][x]});
-  const tp=T.i-T.f-T.t-T.o;
-  const cur=g[ks[0]],cp=cur.i-cur.f-cur.t-cur.o;
+  const tp=T.i-T.f-T.d-T.t-T.o;
+  const cur=g[ks[0]],cp=cur.i-cur.f-cur.d-cur.t-cur.o;
   const vg={};trips.forEach(t=>{const kk=(t.model||'')+' '+t.vehicle;vg[kk]=(vg[kk]||0)+net(t)});
-  return seg+`<div class="grid"><div class="stat"><small>Latest ${per}</small><b class="${cp>=0?'pos':'neg'}">${f(cp)}</b></div><div class="stat"><small>All-time profit</small><b class="${tp>=0?'pos':'neg'}">${f(tp)}</b></div><div class="stat"><small>Total income</small><b>${f(T.i)}</b></div><div class="stat"><small>Total expenses</small><b>${f(T.f+T.t+T.o)}</b></div></div>
-  <div class="card scroll" style="margin-top:12px"><table><tr><th>Period</th><th>Trips</th><th>Income</th><th>Fuel</th><th>Tolls</th><th>Other</th><th>Net</th></tr>
-  ${ks.map(k=>{const r=g[k],p=r.i-r.f-r.t-r.o;return `<tr><td>${label(k)}</td><td>${r.c}</td><td>${f(r.i)}</td><td>${f(r.f)}</td><td>${f(r.t)}</td><td>${f(r.o)}</td><td class="${p>=0?'pos':'neg'}"><b>${f(p)}</b></td></tr>`}).join('')}
-  <tr><td><b>Total</b></td><td>${T.c}</td><td>${f(T.i)}</td><td>${f(T.f)}</td><td>${f(T.t)}</td><td>${f(T.o)}</td><td><b>${f(tp)}</b></td></tr></table></div>
+  return seg+`<div class="grid"><div class="stat"><small>Latest ${per}</small><b class="${cp>=0?'pos':'neg'}">${f(cp)}</b></div><div class="stat"><small>All-time profit</small><b class="${tp>=0?'pos':'neg'}">${f(tp)}</b></div><div class="stat"><small>Total income</small><b>${f(T.i)}</b></div><div class="stat"><small>Total expenses</small><b>${f(T.f+T.d+T.t+T.o)}</b></div></div>
+  <div class="card scroll" style="margin-top:12px"><table><tr><th>Period</th><th>Trips</th><th>Income</th><th>Fuel</th><th>Driver</th><th>Tolls</th><th>Other</th><th>Net</th></tr>
+  ${ks.map(k=>{const r=g[k],p=r.i-r.f-r.d-r.t-r.o;return `<tr><td>${label(k)}</td><td>${r.c}</td><td>${f(r.i)}</td><td>${f(r.f)}</td><td>${f(r.d)}</td><td>${f(r.t)}</td><td>${f(r.o)}</td><td class="${p>=0?'pos':'neg'}"><b>${f(p)}</b></td></tr>`}).join('')}
+  <tr><td><b>Total</b></td><td>${T.c}</td><td>${f(T.i)}</td><td>${f(T.f)}</td><td>${f(T.d)}</td><td>${f(T.t)}</td><td>${f(T.o)}</td><td><b>${f(tp)}</b></td></tr></table></div>
   <div class="card"><h3>Profit by vehicle</h3>${Object.entries(vg).map(([v,p])=>`<div class="tr"><span>${esc(v)}</span><b class="${p>=0?'pos':'neg'}">${f(p)}</b></div>`).join('')}</div>`;
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render()});
