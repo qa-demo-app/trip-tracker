@@ -18,9 +18,9 @@ nav button{flex:1;padding:14px 4px;border:0;background:none;color:var(--mut);fon
 nav button.on{color:var(--pri);box-shadow:inset 0 3px var(--pri)}
 .card{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px;margin-bottom:12px}
 label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
-input,select{width:100%;padding:11px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--tx);font-size:16px}
+input,select,textarea{font-family:inherit;width:100%;padding:11px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--tx);font-size:16px}
 .row{display:flex;gap:8px;align-items:center;margin-bottom:6px}.row>*{flex:1}.row button.x{flex:0 0 40px}
-h3{margin:0 0 4px;font-size:15px}
+a{color:var(--pri)}h3{margin:0 0 4px;font-size:15px}
 .btn{width:100%;padding:13px;border:0;border-radius:10px;background:var(--pri);color:var(--pt);font-weight:700;font-size:16px;margin-top:12px}
 .sm{padding:8px 12px;border:1px dashed var(--pri);background:none;color:var(--pri);border-radius:8px;font-weight:600;width:auto}
 .x{border:0;background:none;color:var(--red);font-size:20px}
@@ -61,10 +61,15 @@ function addView(){
   const vs=[...new Set(trips.map(t=>t.vehicle))],cs=[...new Set(trips.map(t=>t.customer))];
   return `<div class="card"><h3>Trip details</h3>
   <label>Customer</label><input id="cust" list="cl" placeholder="Customer name"><datalist id="cl">${cs.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+  <label>Customer phone number</label><input id="cph" type="tel" inputmode="tel" placeholder="e.g. 98765 43210">
+  <label>About the customer (comment)</label><textarea id="cnote" rows="2" placeholder="Notes about the customer"></textarea>
   <label>Date</label><input id="date" type="date" value="${today()}">
   <label>Trip (From → To)</label><input id="trip" placeholder="e.g. Chennai → Bangalore">
   <label>Vehicle model</label><div class="models">${Object.keys(CAR).map(m=>`<button type="button" class="m ${m===model?'on':''}" onclick="model='${m}';render2()">${CAR[m]}${m}</button>`).join('')}</div>
   <label>Vehicle number</label><input id="veh" list="vl" placeholder="e.g. TN 21 AB 1234"><datalist id="vl">${vs.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+  <label>Driver name</label><input id="dname" placeholder="Driver name">
+  <label>Driver phone number</label><input id="dph" type="tel" inputmode="tel" placeholder="e.g. 98765 43210">
+  <label>About the driver (comment)</label><textarea id="dnote" rows="2" placeholder="Notes about the driver"></textarea>
   <label>Trip Amount (income)</label><input id="amt" type="number" inputmode="decimal" placeholder="0" oninput="calc()"></div>
   <div class="card"><h3>Fuel</h3><input id="fuel" type="number" inputmode="decimal" placeholder="Fuel cost" oninput="calc()"></div>
   <div class="card"><h3>Tolls</h3>${tolls.map((t,i)=>`<div class="row"><input type="number" inputmode="decimal" class="tl" placeholder="Toll ${i+1}" value="${t}" oninput="tolls[${i}]=this.value;calc()"><button class="x" onclick="tolls.splice(${i},1);if(!tolls.length)tolls=[''];render2()">✕</button></div>`).join('')}
@@ -74,7 +79,7 @@ function addView(){
   <div class="card calc"><h3>Automatic calculation</h3><div><span>Income</span><span id="c1"></span></div><div><span>Fuel</span><span id="c2"></span></div><div><span>Tolls</span><span id="c3"></span></div><div><span>Other</span><span id="c4"></span></div><div><span>Total expenses</span><span id="c5"></span></div><div class="net"><span>Net profit</span><span id="c6"></span></div></div>
   <button class="btn" onclick="saveTrip()">Save Trip</button>`;
 }
-function render2(){const k=['cust','date','trip','veh','amt','fuel'].map(i=>$(i).value);render();['cust','date','trip','veh','amt','fuel'].forEach((i,j)=>$(i).value=k[j]);calc()}
+function render2(){const k=['cust','cph','cnote','date','trip','veh','dname','dph','dnote','amt','fuel'].map(i=>$(i).value);render();['cust','cph','cnote','date','trip','veh','dname','dph','dnote','amt','fuel'].forEach((i,j)=>$(i).value=k[j]);calc()}
 function calc(){
   const a=n($('amt').value),fu=n($('fuel').value),tl=tolls.reduce((s,x)=>s+n(x),0),ot=others.reduce((s,x)=>s+n(x.a),0),tot=fu+tl+ot,p=a-tot;
   $('c1').textContent=f(a);$('c2').textContent=f(fu);$('c3').textContent=f(tl);$('c4').textContent=f(ot);$('c5').textContent=f(tot);
@@ -83,14 +88,14 @@ function calc(){
 function saveTrip(){
   const c=$('cust').value.trim(),v=$('veh').value.trim();
   if(!c||!v||!n($('amt').value)){alert('Please enter Customer, Vehicle and Amount.');return}
-  trips.unshift({id:Date.now(),customer:c,date:$('date').value||today(),trip:$('trip').value.trim(),vehicle:v,model,amount:n($('amt').value),fuel:n($('fuel').value),tolls:tolls.filter(x=>n(x)),others:others.filter(o=>n(o.a)).map(o=>({n:o.n,a:n(o.a)}))});
+  trips.unshift({id:Date.now(),customer:c,date:$('date').value||today(),trip:$('trip').value.trim(),vehicle:v,model,cphone:$('cph').value.trim(),cnote:$('cnote').value.trim(),driver:$('dname').value.trim(),dphone:$('dph').value.trim(),dnote:$('dnote').value.trim(),amount:n($('amt').value),fuel:n($('fuel').value),tolls:tolls.filter(x=>n(x)),others:others.filter(o=>n(o.a)).map(o=>({n:o.n,a:n(o.a)}))});
   save();tolls=[''];others=[{n:'',a:''}];tab='list';render();
 }
 function listView(){
   if(!trips.length)return '<div class="empty">No trips yet. Add your first trip.</div>';
   return trips.map(t=>{const p=net(t);return `<div class="card"><div class="tr"><div class="ico">${CAR[t.model]||''}</div><div style="flex:1"><b>${esc(t.customer)}</b></div><b class="${p>=0?'pos':'neg'}">${f(p)}</b></div>
   <div class="tr"><small>${t.date} · ${esc(t.model||'')} ${esc(t.vehicle)}</small><small>Income ${f(t.amount)}</small></div>
-  ${t.trip?`<small>${esc(t.trip)}</small><br>`:''}<small>Fuel ${f(t.fuel)} · Tolls ${f(t.tolls.reduce((s,x)=>s+n(x),0))} (${t.tolls.length}) · Other ${f(t.others.reduce((s,x)=>s+n(x.a),0))}</small><br>
+  ${t.trip?`<small>${esc(t.trip)}</small><br>`:''}${t.cphone?`<small>📞 <a href="tel:${esc(t.cphone)}">${esc(t.cphone)}</a></small><br>`:''}${t.cnote?`<small>💬 ${esc(t.cnote)}</small><br>`:''}${t.driver||t.dphone?`<small>🧑‍✈️ Driver: ${esc(t.driver||'')} ${t.dphone?`<a href="tel:${esc(t.dphone)}">${esc(t.dphone)}</a>`:''}</small><br>`:''}${t.dnote?`<small>📝 ${esc(t.dnote)}</small><br>`:''}<small>Fuel ${f(t.fuel)} · Tolls ${f(t.tolls.reduce((s,x)=>s+n(x),0))} (${t.tolls.length}) · Other ${f(t.others.reduce((s,x)=>s+n(x.a),0))}</small><br>
   <button class="del" onclick="delTrip(${t.id})">Delete</button></div>`}).join('');
 }
 function delTrip(id){if(confirm('Delete this trip?')){trips=trips.filter(t=>t.id!==id);save();render()}}
@@ -111,7 +116,7 @@ function dl(type){
   if(!trips.length){alert('No trips to export yet.');return}
   let data,name,mime;
   if(type==='json'){data=JSON.stringify(trips,null,1);name='trips-backup-'+today()+'.json';mime='application/json'}
-  else{const q=v=>'"'+String(v).replace(/"/g,'""')+'"';data='Date,Customer,Trip,Model,Vehicle,Amount,Fuel,Tolls,Other,Net\n'+trips.map(t=>[t.date,q(t.customer),q(t.trip),q(t.model||''),q(t.vehicle),t.amount,t.fuel,t.tolls.reduce((a,x)=>a+n(x),0),t.others.reduce((a,x)=>a+n(x.a),0),net(t)].join(',')).join('\n');name='trips-'+today()+'.csv';mime='text/csv'}
+  else{const q=v=>'"'+String(v).replace(/"/g,'""')+'"';data='Date,Customer,Trip,Model,Vehicle,CustomerPhone,CustomerNote,Driver,DriverPhone,DriverNote,Amount,Fuel,Tolls,Other,Net\n'+trips.map(t=>[t.date,q(t.customer),q(t.trip),q(t.model||''),q(t.vehicle),q(t.cphone||''),q(t.cnote||''),q(t.driver||''),q(t.dphone||''),q(t.dnote||''),t.amount,t.fuel,t.tolls.reduce((a,x)=>a+n(x),0),t.others.reduce((a,x)=>a+n(x.a),0),net(t)].join(',')).join('\n');name='trips-'+today()+'.csv';mime='text/csv'}
   try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:mime}));a.download=name;document.body.appendChild(a);a.click();a.remove()}catch(e){alert('Download not supported here. Open the hosted copy of the app to download.')}
 }
 function imp(file){
